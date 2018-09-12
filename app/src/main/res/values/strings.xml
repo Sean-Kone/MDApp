@@ -9,6 +9,8 @@
     <string name="reject_button_text">Reject</string>
     <string name="accept_button_text">Accept</string>
 
+    <string name="error_no_internet">There is no network connection. Please connect to a network and try again</string>
+    <string name="error_bad_network">Check your network connection</string>
 
     <string name="error_actions_json_msg">Something went wrong while getting the actions. Please try again.</string>
 
