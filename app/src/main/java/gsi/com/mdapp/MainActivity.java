@@ -24,20 +24,20 @@ import java.util.HashMap;
 
 public class MainActivity extends BaseActivity implements MainFragment.OnMainFragmentListener {
 
-    private static final String FRAGMENT_TAG_MAIN = "MainFragment";
-    private static final int CONTACT_PICKER_RESULT = 1001;
-    private static final int RESULT_OK = -1;
     public static final int MD_PERMISSION_REQUEST_ACCESS_FINE_LOCATION = 5001;
     public static final int MD_PERMISSION_REQUEST_READ_CONTACTS = 5002;
     public static final int MD_PERMISSION_REQUEST_CALL_PHONE = 5003;
+
+    private static final String FRAGMENT_TAG_MAIN = "MainFragment";
+    private static final int CONTACT_PICKER_RESULT = 1001;
+    private static final int RESULT_OK = -1;
     private static final String BTN_CFG_URL = "https://api.jsonbin.io/b/5b91335d3ffac56f4bdac489/latest";
 
+    private int mCurrBtnActionIdx;
     private String mChosenNumber;
     private FrameLayout mBlockingProgressBar;
-
     private HashMap<String, ButtonAction.ActionInfo> mActionsOccurMap = new HashMap<>();
     private ArrayList<ButtonAction> mActions = new ArrayList<>();
-    private int mCurrBtnActionIdx;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,6 +48,30 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
         getBtnCfg(BTN_CFG_URL);
     }
 
+    void getBtnCfg(String url) {
+        new ApiManager(this).getUrl(url, new ApiManager.UrlResponse() {
+            @Override
+            public void onResponse(boolean response, String content) {
+                if (response) {
+                    try {
+                        JSONObject jsonObject = new JSONObject(content);
+                        parseJson(jsonObject);
+                    } catch (JSONException e) {
+                        showBtnCfgError(getString(R.string.error_actions_json_msg));
+                    }
+
+                } else {
+                    showBtnCfgError(getString(R.string.error_actions_json_msg));
+                }
+            }
+
+            @Override
+            public void onError(final String error) {
+                showBtnCfgError(error);
+            }
+        });
+    }
+
     void parseJson(JSONObject jsonObject) {
         try {
             JSONArray array = jsonObject.getJSONArray("buttonActions");
@@ -56,18 +80,6 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
             String title = btnCfg.getString("buttonTitle");
             String color = btnCfg.getString("buttonColor");
             final ButtonConfiguration cfg = new ButtonConfiguration(color, title);
-
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    MainFragment fragment = getMainFragment();
-                    if (fragment != null) {
-                        fragment.updateButton(cfg);
-                    }
-                    mBlockingProgressBar.setVisibility(View.GONE);
-                }
-            });
-
             int size = array.length();
             if (size > 0) {
                 JSONObject actionJson;
@@ -100,12 +112,34 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
                     }
                 }
                 sortActionsByPriority();
+
+
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        MainFragment fragment = getMainFragment();
+                        if (fragment != null) {
+                            fragment.updateButton(cfg);
+                        }
+                        mBlockingProgressBar.setVisibility(View.GONE);
+                    }
+                });
+
             }
         } catch (JSONException e) {
             MDALogger.logStackTrace(e);
         }
     }
 
+    void showBtnCfgError(final String error) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mBlockingProgressBar.setVisibility(View.GONE);
+                showAlert(error);
+            }
+        });
+    }
 
     /**
      * Equal priorities will be sorted by the average priority of the action occurances
@@ -129,36 +163,6 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
                     c = pAvg1.compareTo(pAvg2);
                 }
                 return c;
-            }
-        });
-    }
-
-
-    void getBtnCfg(String url) {
-        new ApiManager().getUrl(url, new ApiManager.UrlResponse() {
-            @Override
-            public void onResponse(boolean response, String content) {
-                if (response) {
-                    try {
-                        JSONObject jsonObject = new JSONObject(content);
-                        parseJson(jsonObject);
-                    } catch (JSONException e) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                showAlert(getString(R.string.error_actions_json_msg));
-                            }
-                        });
-                    }
-
-                } else {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            showAlert(getString(R.string.error_actions_json_msg));
-                        }
-                    });
-                }
             }
         });
     }
@@ -256,7 +260,6 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
         if (resultCode == RESULT_OK) {
             switch (requestCode) {
                 case CONTACT_PICKER_RESULT:
-                    // handle contact result
                     Cursor cursor = null;
                     try {
                         String phoneNo = null ;
@@ -273,6 +276,59 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
                     }
                     break;
             }
+        }
+    }
+
+    /**
+     * Fragments getters and methods
+     */
+    MainFragment getMainFragment() {
+        MainFragment fragment = null;
+        if (getSupportFragmentManager().findFragmentByTag(FRAGMENT_TAG_MAIN) != null) {
+            fragment = (MainFragment) getSupportFragmentManager().findFragmentByTag(FRAGMENT_TAG_MAIN);
+        }
+        return fragment;
+    }
+
+    /**
+     * {@link MainFragment.OnMainFragmentListener} interface methods
+     */
+    @Override
+    public void onPerformAction() {
+        if (mCurrBtnActionIdx < mActions.size()) {
+            ButtonAction action = mActions.get(mCurrBtnActionIdx);
+            mCurrBtnActionIdx++;
+
+            boolean isEnabled = action.isIsEnabled();
+            if (isEnabled) {
+                @MDA.ActionType String type = action.getType();
+                switch (type) {
+                    case MDA.ACTION_TYPE_ANIMATION: {
+                        MainFragment fragment = getMainFragment();
+                        if (fragment != null) {
+                            fragment.animateButton();
+                        }
+                        break;
+                    }
+                    case MDA.ACTION_TYPE_CALL: {
+                        callContact();
+                        break;
+                    }
+                    case MDA.ACTION_TYPE_LOCATION: {
+                        getLocationAttempt();
+                        break;
+                    }
+                    case MDA.ACTION_TYPE_NOTIFICATION: {
+                        triggerBackgroundNotification(true);
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
+                }
+            }
+        } else {
+            showAlert(getString(R.string.no_actions_msg));
         }
     }
 
@@ -346,57 +402,25 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
         }
     }
 
-    /**
-     * Fragments getters and methods
-     */
-    MainFragment getMainFragment() {
-        MainFragment fragment = null;
-        if (getSupportFragmentManager().findFragmentByTag(FRAGMENT_TAG_MAIN) != null) {
-            fragment = (MainFragment) getSupportFragmentManager().findFragmentByTag(FRAGMENT_TAG_MAIN);
-        }
-        return fragment;
-    }
+    void mockUrlRequest(final ApiManager.MockUrlResponse response) {
 
-    /**
-     * {@link MainFragment.OnMainFragmentListener} interface methods
-     */
-    @Override
-    public void onPerformAction() {
-        if (mCurrBtnActionIdx < mActions.size()) {
-            ButtonAction action = mActions.get(mCurrBtnActionIdx);
-            mCurrBtnActionIdx++;
-
-            boolean isEnabled = action.isIsEnabled();
-            if (isEnabled) {
-                @MDA.ActionType String type = action.getType();
-                switch (type) {
-                    case MDA.ACTION_TYPE_ANIMATION: {
-                        MainFragment fragment = getMainFragment();
-                        if (fragment != null) {
-                            fragment.animateButton();
-                        }
-                        break;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000);
+                    try {
+                        response.onResponse(true, mockCfgObj());
+                    } catch (JSONException e) {
+                        MDALogger.logStackTrace(e);
                     }
-                    case MDA.ACTION_TYPE_CALL: {
-                        callContact();
-                        break;
-                    }
-                    case MDA.ACTION_TYPE_LOCATION: {
-                        getLocationAttempt();
-                        break;
-                    }
-                    case MDA.ACTION_TYPE_NOTIFICATION: {
-                        triggerBackgroundNotification(true);
-                        break;
-                    }
-                    default: {
-                        break;
-                    }
+                } catch (InterruptedException e) {
+                    Thread.interrupted();
+                    MDALogger.logStackTrace(e);
                 }
+
             }
-        } else {
-            showAlert(getString(R.string.no_actions_msg));
-        }
+        }).start();
     }
 
     JSONObject mockCfgObj() throws JSONException {
@@ -475,26 +499,5 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
 
 
         return jsonObject;
-    }
-
-    void mockUrlRequest(final ApiManager.MockUrlResponse response) {
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(1000);
-                    try {
-                        response.onResponse(true, mockCfgObj());
-                    } catch (JSONException e) {
-                        MDALogger.logStackTrace(e);
-                    }
-                } catch (InterruptedException e) {
-                    Thread.interrupted();
-                    MDALogger.logStackTrace(e);
-                }
-
-            }
-        }).start();
     }
 }
