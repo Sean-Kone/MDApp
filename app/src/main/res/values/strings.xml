@@ -10,6 +10,8 @@
     <string name="accept_button_text">Accept</string>
 
 
+    <string name="error_actions_json_msg">Something went wrong while getting the actions. Please try again.</string>
+
     <string name="notif_move_to_bg_msg">MDApp is in the background</string>
 
     <string name="play_services_not_supported">This device is not supported</string>
