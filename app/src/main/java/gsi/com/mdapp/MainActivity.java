@@ -24,15 +24,12 @@ import java.util.HashMap;
 
 public class MainActivity extends BaseActivity implements MainFragment.OnMainFragmentListener {
 
-
     private static final String FRAGMENT_TAG_MAIN = "MainFragment";
     private static final int CONTACT_PICKER_RESULT = 1001;
     private static final int RESULT_OK = -1;
-
     public static final int MD_PERMISSION_REQUEST_ACCESS_FINE_LOCATION = 5001;
     public static final int MD_PERMISSION_REQUEST_READ_CONTACTS = 5002;
     public static final int MD_PERMISSION_REQUEST_CALL_PHONE = 5003;
-
     private static final String BTN_CFG_URL = "https://api.jsonbin.io/b/5b91335d3ffac56f4bdac489/latest";
 
     private String mChosenNumber;
@@ -48,20 +45,7 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
         setContentView(R.layout.activity_main);
         mBlockingProgressBar = (FrameLayout) findViewById(R.id.am_blocking_progress_bar);
         getSupportFragmentManager().beginTransaction().add(R.id.am_fl_root, MainFragment.newInstance(), FRAGMENT_TAG_MAIN).commit();
-
-        mockUrlRequest(new ApiManager.MockUrlResponse() {
-            @Override
-            public void onResponse(boolean response, JSONObject jsonObject) {
-
-                parseJson(jsonObject);
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mBlockingProgressBar.setVisibility(View.GONE);
-                    }
-                });
-            }
-        });
+        getBtnCfg(BTN_CFG_URL);
     }
 
     void parseJson(JSONObject jsonObject) {
@@ -124,7 +108,9 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
 
 
     /**
-     * Equal priorities will be sorted by the average priority
+     * Equal priorities will be sorted by the average priority of the action occurances
+     *
+     * Actions which are disabled are given a lessened weight to their priority
      */
     void sortActionsByPriority() {
         Collections.sort(mActions, new Comparator<ButtonAction>() {
@@ -147,118 +133,34 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
         });
     }
 
-    JSONObject mockCfgObj() throws JSONException {
-
-
-        JSONObject typeLocJson = new JSONObject();
-        typeLocJson.put("priority", 2);
-        typeLocJson.put("enabled", true);
-        typeLocJson.put("type", "location");
-
-        JSONObject typeLocJson1 = new JSONObject();
-        typeLocJson1.put("priority", 1);
-        typeLocJson1.put("enabled", true);
-        typeLocJson1.put("type", "location");
-
-
-        JSONObject typeNotifJson = new JSONObject();
-        typeNotifJson.put("priority", 3);
-        typeNotifJson.put("enabled", true);
-        typeNotifJson.put("type", "notification");
-
-        JSONObject typeCallJson = new JSONObject();
-        typeCallJson.put("priority", 2);
-        typeCallJson.put("enabled", true);
-        typeCallJson.put("type", "call");
-
-
-        JSONObject typeCallJson2 = new JSONObject();
-        typeCallJson2.put("priority", 2);
-        typeCallJson2.put("enabled", true);
-        typeCallJson2.put("type", "call");
-
-
-        JSONObject typeAnimJson = new JSONObject();
-        typeAnimJson.put("priority", 4);
-        typeAnimJson.put("enabled", true);
-        typeAnimJson.put("type", "animation");
-
-        JSONObject typeAnimJson2 = new JSONObject();
-        typeAnimJson2.put("priority", 4);
-        typeAnimJson2.put("enabled", false);
-        typeAnimJson2.put("type", "animation");
-
-        JSONArray buttonActions = new JSONArray();
-        buttonActions.put(typeLocJson);
-        buttonActions.put(typeAnimJson);
-        buttonActions.put(typeCallJson);
-        buttonActions.put(typeNotifJson);
-        buttonActions.put(typeCallJson2);
-
-
-//        buttonActions.put(typeAnimJson2);
-//        buttonActions.put(typeAnimJson2);
-//        buttonActions.put(typeLocJson);
-//        buttonActions.put(typeLocJson);
-//        buttonActions.put(typeCallJson);
-//        buttonActions.put(typeNotifJson);
-//        buttonActions.put(typeAnimJson2);
-//        buttonActions.put(typeAnimJson);
-//        buttonActions.put(typeAnimJson);
-//        buttonActions.put(typeCallJson);
-//        buttonActions.put(typeNotifJson);
-//        buttonActions.put(typeAnimJson2);
-//        buttonActions.put(typeLocJson);
-//        buttonActions.put(typeAnimJson);
-//        buttonActions.put(typeAnimJson);
-
-        JSONObject buttonConfiguration = new JSONObject();
-        buttonConfiguration.put("buttonTitle", "I am a button");
-        buttonConfiguration.put("buttonColor", "#d72525");
-
-
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put("buttonActions", buttonActions);
-        jsonObject.put("buttonConfiguration", buttonConfiguration);
-
-
-        return jsonObject;
-    }
-
 
     void getBtnCfg(String url) {
         new ApiManager().getUrl(url, new ApiManager.UrlResponse() {
             @Override
             public void onResponse(boolean response, String content) {
                 if (response) {
-
+                    try {
+                        JSONObject jsonObject = new JSONObject(content);
+                        parseJson(jsonObject);
+                    } catch (JSONException e) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                showAlert(getString(R.string.error_actions_json_msg));
+                            }
+                        });
+                    }
 
                 } else {
-
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            showAlert(getString(R.string.error_actions_json_msg));
+                        }
+                    });
                 }
             }
         });
-    }
-
-    void mockUrlRequest(final ApiManager.MockUrlResponse response) {
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Thread.sleep(1000);
-                    try {
-                        response.onResponse(true, mockCfgObj());
-                    } catch (JSONException e) {
-                        MDALogger.logStackTrace(e);
-                    }
-                } catch (InterruptedException e) {
-                    Thread.interrupted();
-                    MDALogger.logStackTrace(e);
-                }
-
-            }
-        }).start();
     }
 
     @Override
@@ -274,12 +176,6 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
             triggerBackgroundNotification(false);
         }
     }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-    }
-
 
     /**
      * Button action methods
@@ -321,13 +217,6 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
         locMgr.connect();
     }
 
-
-    private void openContactList() {
-        Intent contactPickerIntent = new Intent(Intent.ACTION_PICK,
-                ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
-        startActivityForResult(contactPickerIntent, CONTACT_PICKER_RESULT);
-    }
-
     private void attemptCall(String phoneNumber) {
         if (checkPermission(new String[]{Manifest.permission.CALL_PHONE}, MD_PERMISSION_REQUEST_CALL_PHONE)) {
             makeCall(phoneNumber);
@@ -346,6 +235,12 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
         if (checkPermission(new String[]{Manifest.permission.READ_CONTACTS}, MD_PERMISSION_REQUEST_READ_CONTACTS)) {
             openContactList();
         }
+    }
+
+    private void openContactList() {
+        Intent contactPickerIntent = new Intent(Intent.ACTION_PICK,
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI);
+        startActivityForResult(contactPickerIntent, CONTACT_PICKER_RESULT);
     }
 
     void triggerBackgroundNotification(boolean isNotif) {
@@ -502,5 +397,104 @@ public class MainActivity extends BaseActivity implements MainFragment.OnMainFra
         } else {
             showAlert(getString(R.string.no_actions_msg));
         }
+    }
+
+    JSONObject mockCfgObj() throws JSONException {
+
+
+        JSONObject typeLocJson = new JSONObject();
+        typeLocJson.put("priority", 2);
+        typeLocJson.put("enabled", true);
+        typeLocJson.put("type", "location");
+
+        JSONObject typeLocJson1 = new JSONObject();
+        typeLocJson1.put("priority", 1);
+        typeLocJson1.put("enabled", true);
+        typeLocJson1.put("type", "location");
+
+
+        JSONObject typeNotifJson = new JSONObject();
+        typeNotifJson.put("priority", 3);
+        typeNotifJson.put("enabled", true);
+        typeNotifJson.put("type", "notification");
+
+        JSONObject typeCallJson = new JSONObject();
+        typeCallJson.put("priority", 2);
+        typeCallJson.put("enabled", true);
+        typeCallJson.put("type", "call");
+
+
+        JSONObject typeCallJson2 = new JSONObject();
+        typeCallJson2.put("priority", 2);
+        typeCallJson2.put("enabled", true);
+        typeCallJson2.put("type", "call");
+
+
+        JSONObject typeAnimJson = new JSONObject();
+        typeAnimJson.put("priority", 4);
+        typeAnimJson.put("enabled", true);
+        typeAnimJson.put("type", "animation");
+
+        JSONObject typeAnimJson2 = new JSONObject();
+        typeAnimJson2.put("priority", 4);
+        typeAnimJson2.put("enabled", false);
+        typeAnimJson2.put("type", "animation");
+
+        JSONArray buttonActions = new JSONArray();
+        buttonActions.put(typeLocJson);
+        buttonActions.put(typeAnimJson);
+        buttonActions.put(typeCallJson);
+        buttonActions.put(typeNotifJson);
+        buttonActions.put(typeCallJson2);
+
+
+//        buttonActions.put(typeAnimJson2);
+//        buttonActions.put(typeAnimJson2);
+//        buttonActions.put(typeLocJson);
+//        buttonActions.put(typeLocJson);
+//        buttonActions.put(typeCallJson);
+//        buttonActions.put(typeNotifJson);
+//        buttonActions.put(typeAnimJson2);
+//        buttonActions.put(typeAnimJson);
+//        buttonActions.put(typeAnimJson);
+//        buttonActions.put(typeCallJson);
+//        buttonActions.put(typeNotifJson);
+//        buttonActions.put(typeAnimJson2);
+//        buttonActions.put(typeLocJson);
+//        buttonActions.put(typeAnimJson);
+//        buttonActions.put(typeAnimJson);
+
+        JSONObject buttonConfiguration = new JSONObject();
+        buttonConfiguration.put("buttonTitle", "I am a button");
+        buttonConfiguration.put("buttonColor", "#d72525");
+
+
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("buttonActions", buttonActions);
+        jsonObject.put("buttonConfiguration", buttonConfiguration);
+
+
+        return jsonObject;
+    }
+
+    void mockUrlRequest(final ApiManager.MockUrlResponse response) {
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(1000);
+                    try {
+                        response.onResponse(true, mockCfgObj());
+                    } catch (JSONException e) {
+                        MDALogger.logStackTrace(e);
+                    }
+                } catch (InterruptedException e) {
+                    Thread.interrupted();
+                    MDALogger.logStackTrace(e);
+                }
+
+            }
+        }).start();
     }
 }
