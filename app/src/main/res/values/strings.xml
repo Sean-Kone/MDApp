@@ -1,0 +1,33 @@
+<resources>
+    <string name="app_name">MDApp</string>
+
+
+    <string name="allow_button_text">ALLOW</string>
+    <string name="deny_button_text">DENY</string>
+    <string name="ok_button_text">OK</string>
+    <string name="dismiss_button_text">Dismiss</string>
+    <string name="reject_button_text">Reject</string>
+    <string name="accept_button_text">Accept</string>
+
+
+    <string name="notif_move_to_bg_msg">MDApp is in the background</string>
+
+    <string name="play_services_not_supported">This device is not supported</string>
+
+    <string name="no_actions_msg">Oops...\n\nNo more actions to perform</string>
+    <string name="error_loc_msg">Error getting location</string>
+
+    <string name="bg_notif_msg">Activated background notification</string>
+
+
+    <string name="current_adrs_msg">You are at</string>
+    <string name="current_pos_msg">Position</string>
+
+
+    <string name="perm_rationale_location">Your location is only needed to show you your current location for location action</string>
+    <string name="perm_rationale_contacts">We only need to read your contacts to allow you to choose a contact to call</string>
+    <string name="perm_rationale_phone_call">We only use this to allow you to make a call</string>
+
+
+
+</resources>

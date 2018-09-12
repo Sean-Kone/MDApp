@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "181611883329",
+    "firebase_url": "https://mdapp-215706.firebaseio.com",
+    "project_id": "mdapp-215706",
+    "storage_bucket": "mdapp-215706.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:181611883329:android:92bc701c8d1b69f8",
+        "android_client_info": {
+          "package_name": "gsi.com.mdapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "181611883329-0opnhijhhejlnn74q49f1kh5v9906o4c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpnr9ME0lUwRpS_CA5Go9tzJgj80WbyQc"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

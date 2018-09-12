@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#11B5E9</color>
+    <color name="colorPrimaryDark">#0C82A6</color>
+    <color name="colorAccent">#8CD98C</color>
+
+
+    <color name="BlackFaded70p">#B3000000</color>
+    <color name="BlackFaded65p">#A6000000</color>
+    <color name="BlackFaded60p">#99000000</color>
+    <color name="BlackFaded40p">#66000000</color>
+    <color name="BlackFaded35p">#59000000</color>
+    <color name="BlackFaded30p">#4D000000</color>
+
+</resources>
